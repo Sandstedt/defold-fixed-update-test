@@ -1,0 +1,54 @@
+local monarch = require "monarch.monarch"
+
+local debug = true
+
+local box_left = nil
+local box_right = nil
+
+local move = {
+	left = false,
+	right = false
+}
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	
+	box_left = gui.get_node("box_left")
+	box_right = gui.get_node("box_right")
+
+	gui.set_enabled(box_left, false)
+	gui.set_enabled(box_right, false)
+end
+
+function on_input(self, action_id, action)
+	if action_id == hash("touch") and action.pressed then
+		if gui.pick_node(gui.get_node("close"), action.x, action.y) then
+			monarch.show("screen_start")
+		end
+	end
+end
+
+function show_again_screen()
+	monarch.show("screen_start")
+end
+
+function on_message(self, message_id, message, sender)
+	if debug then
+		if message_id == hash("move") then
+			move = message
+			-- if message.left == false then
+			-- 	msg.post("@render:", "draw_debug_text", { text = "released gui", position = vmath.vector3(100, 100, 0), color = vmath.vector4(0, 1, 0, 1) })
+			-- end
+			-- if message.right == false then
+			-- 	msg.post("@render:", "draw_debug_text", { text = "released gui", position = vmath.vector3(400, 100, 0), color = vmath.vector4(0, 1, 0, 1) })
+			-- end
+			gui.set_enabled(box_left, move.left)
+			gui.set_enabled(box_right, move.right)
+		end
+	end
+
+	if message_id == hash("game_over") then
+		local node = gui.get_node("game_over")
+		gui.animate(node, "color", vmath.vector4(1, 1, 1, 1), gui.EASING_OUTCIRC, 2, 0, show_again_screen)
+	end
+end

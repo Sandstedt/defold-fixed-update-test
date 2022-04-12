@@ -1,0 +1,12 @@
+local monarch = require "monarch.monarch"
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("#", "show_screen_start")
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("show_screen_start") then
+		monarch.show("screen_start")
+	end
+end

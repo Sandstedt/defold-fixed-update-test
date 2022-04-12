@@ -1,0 +1,4 @@
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	-- msg.post("#", "show_screen_start")
+end

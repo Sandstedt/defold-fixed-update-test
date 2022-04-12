@@ -1,0 +1,178 @@
+require "main/car"
+
+go.property("gravity", vmath.vector3(0, -50, 0))
+go.property("turn_amount", 30)
+go.property("acceleration", 10)
+go.property("max_speed", 300)
+go.property("deacceleration", 10)
+
+local screen_size = { w = sys.get_config("display.width"), h = sys.get_config("display.height") }
+local half = screen_size.w / 2 
+
+local forward = false -- the current forward direction
+local forward_speed = 0
+local delta = 0.5 -- procent of left and right position on screen
+local anim_delta = 0.5
+local state = { left = false, right = false }
+local last_state = state
+local pos = vmath.vector3()
+
+local left_turn = nil
+local right_turn = nil
+
+local is_dead = false
+
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	pos = go.get(".", "position")
+
+	left_turn = vmath.vector3(self.turn_amount, 0, 0)
+	right_turn = vmath.vector3(-self.turn_amount, 0, 0)
+	sprite.play_flipbook("#sprite", hash("idle"))
+end
+
+local last_sprite_no = 0
+
+-- test change this to update
+function fixed_update(self, dt)
+	if is_dead then return end
+
+	if forward then
+		forward_speed = math.min(forward_speed + self.acceleration, self.max_speed)
+	else
+		if (anim_delta > 0.55) then
+			anim_delta = anim_delta - 0.1
+		elseif anim_delta < 0.45 then
+			anim_delta = anim_delta + 0.1
+		end
+		-- forward_speed = math.max(forward_speed - self.deacceleration, 0)
+		forward_speed = 0
+	end
+
+	local sprite_no = clamp(1, 9, round(anim_delta * 10) + 0)
+	if sprite_no == 5 then
+		sprite_no = "idle"
+	end
+	if last_sprite_no ~= sprite_no then
+		sprite.play_flipbook("#sprite", hash( sprite_no )) -- todo: if anim_delta equals delta, return
+	end
+
+	last_sprite_no = sprite_no
+
+	local turn = vmath.lerp(delta, left_turn, right_turn)["x"] -- no linear lerp function i defold except in vmath
+	local turn_quaternion = vmath.quat_axis_angle(vmath.vector3(0, 0, 1), turn * dt) -- set the turn quaternion based on the turn value
+	local distance = forward_speed * dt
+	local direction = vmath.rotate(turn_quaternion, vmath.vector3(0, 1, 0)) * distance -- get a direction vector
+
+	pos = go.get(".", "position")
+	pos = pos + direction -- add this to the current position
+
+	msg.post(".", "apply_force", {force = direction * 100, position = pos})
+	-- go.set(".", "position", pos)
+
+	last_state = state
+end
+
+function on_message(self, message_id, message)
+	if is_dead then return end
+	
+	if message_id == hash("screen_size") then
+		w = message.w
+		h = message.h
+	end
+
+	if message_id == hash("collision_response") then
+		if  message.group == hash("death") then
+			if not id_dead then
+				msg.post("/go#monarch", "game_over")
+				is_dead = die(is_dead)
+			end
+		end
+	end
+
+	if message_id == hash("contact_point_response") then
+		if message.applied_impulse > 400 then
+			msg.post("/camera", "shake", { intensity = message.applied_impulse * 0.00005, duration = 0.1, direction = "both" })
+		end
+	end
+	
+end
+
+function round(n)
+	return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
+end
+
+function clamp(min, max, v)
+	return math.max(min, math.min(max, v))
+end
+
+function set_state(self, state, touchdata)
+	forward = true
+	delta = touchdata.x / screen_size.w
+
+	if touchdata.released then
+		forward = false
+		delta = 0.5
+	else
+		anim_delta = delta
+	end
+
+	-- animation
+	state.left = false
+	state.right = false
+	
+	if delta < 0.4 then
+		state.left = true
+	elseif delta > 0.4 then
+		state.right = true
+	end
+
+	return state
+end
+
+function on_input(self, action_id, action)
+	if is_dead then return end
+	if action_id == hash("touch_multi") then
+		-- Spawn at each touch point
+
+		-- for each finger, check what side it's on, send action based on that.
+		-- but cap to only on per side
+		
+		if action.touch then
+			state = { left = false, right = false }
+			
+			for i, touchdata in ipairs(action.touch) do
+				state = set_state(self, state, touchdata)
+			end
+			--msg.post("/gui#gui_main", "move", state) -- just for debug
+		end
+		
+	-- mostly for debugging, should work in html5 without this
+	elseif action_id == hash("touch") then
+		state = { left = false, right = false }
+		state = set_state(self, state, action)
+		--msg.post("/gui#gui_main", "move", state) -- just for debug
+
+	-- for desktop
+	elseif action_id == hash("left") then
+		if action.value == 1 then
+			forward = true
+			state = { left = true, right = false }
+		elseif action.value == 0 then
+			forward = false
+			state = { left = false, right = false }
+		end
+		--msg.post("/gui#gui_main", "move", state) -- just for debug
+	elseif action_id == hash("right") then
+		if action.value == 1 then
+			forward = true
+			state = { left = false, right = true }
+		elseif action.value == 0 then
+			forward = false
+			state = { left = false, right = false }
+		end
+		--msg.post("/gui#gui_main", "move", state) -- just for debug
+	end
+	
+end
