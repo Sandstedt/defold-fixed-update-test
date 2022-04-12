@@ -1,24 +1,9 @@
-# Bumper Cars
+# Test project for fixed update
 
-## Adnroid deployment
-`adb install '.\builds/armv7-android\Bumper Cars\Bumper Cars.apk'`
+## Usage
 
-This project was created from the "mobile" project template. This means that the settings in ["game.project"](defold://open?path=/game.project) have been changed to be suitable for a mobile game:
+Test the game by running it and touch anywhere on the screen. Depending on your computer/mobile, the player will stutter a bit while moving forward.
 
-- The screen size is set to 640x1136
-- The projection is set to Fixed Fit
-- Orientation is fixed vertically
-- Android and iOS icons are set
-- Mouse click/single touch is bound to action "touch"
-- A simple script in a game object is set up to receive and react to input
-- Accelerometer input is turned off (for better battery life)
+Now open touch_controller.script and change fixed_update to update and see the difference in stuttering.
 
-[Build and run](defold://build) to see it in action. You can of course alter these settings to fit your needs.
-
-Check out [the documentation pages](https://defold.com/learn) for examples, tutorials, manuals and API docs.
-
-If you run into trouble, help is available in [our forum](https://forum.defold.com).
-
-Happy Defolding!
-
----
+Not sure if it's related to fixed_update or some performence issue overall in my code.
